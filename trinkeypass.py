@@ -2,7 +2,7 @@
 """This code, designed to run on an Adafruit Neo Trinkey, sends a password
 to the connected system as if it was a keyboard."""
 
-__version__ = '0.0.7'
+__version__ = '0.0.8'
 
 __author__ = 'William Stearns'
 __copyright__ = 'Copyright 2021, William Stearns'
@@ -147,8 +147,6 @@ def load_raw_keyfile(passfile_dir, padded_key_number):
 		content, _ = load_file_into_string(filename)
 	else:
 		debug("Unable to locate " + filename)
-		time.sleep(30)
-		sys.exit(1)
 
 	return content
 
