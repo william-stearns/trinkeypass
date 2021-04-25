@@ -159,8 +159,8 @@ have up to 10,000 of them.
 1. Save a real password/passphrase/pin to 0001.txt .  Press T1 until just
 LED0 is lit, indicating that you're on the 2nd password, 0001.txt .
 
-2. Start logging in to whatever that password is for, and stop when you
-get to the password/passphrase/pin field.
+2. Start logging in; stop when you get to the password/passphrase/pin
+field.
 
 3. Make sure your cursor is in the password/passphrase/pin box or window.
 
@@ -208,7 +208,14 @@ to end up the same as what the remote system/application expect.
 
 * It's a good idea to buy 2 or more of these and load your passwords on
 all of them.  You can keep one with you, perhaps in a wallet or on a
-keyring, and place the others in a safe location.
+keyring, and place the others in safe locations.
+
+* This approach could be very handy for systems that are managed by
+multiple people.  A Trinkeypass could hold a root/Administrator password,
+database credentials, and any other credentials not needed in normal
+operation.  This could be passed from admin to admin on shift changes or
+stored in a central locked area.
+
 
 
 ### Using the transform feature
@@ -243,6 +250,9 @@ anICEButbLandPasswORD
    This means that if anyone can get the files off my Trinkey, they won't
 have the actual passwords, just these slightly modified ones.
 
+   While this password doesn't have any digits, note that digits will be
+replaced by (9 - that digit).
+
    Now we tell Trinkeypass to do this transformation for the second
 character of every block of 4:
 
@@ -262,8 +272,8 @@ password (0001.txt, just LED0 lit green).  When I press T2 now, the
 transform I just entered will *reverse* the character changes and type
 "aNICEbutblandpassWORD" as a keyboard.
 
-4. As of version 7 this just swaps the case of letters.  A future release
-will also replace every digit with 9-thatdigit .
+4. In versions >= 0.0.9 this swaps the case of letters and replaces every
+digit with (9-thatdigit) .
 
 
 
@@ -277,7 +287,7 @@ just as easily as a password typed at an actual keyboard.
 
 * If you're using multiple factors to log in somewhere (such as a 
 password, an ssh key, and the passphrase to unlock that ssh key, please
-do not store all factors in any single place (including this Trinkey).
+do not store all factors in any single place (including on this Trinkey).
 
 
 ---
