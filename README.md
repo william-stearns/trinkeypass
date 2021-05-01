@@ -44,14 +44,14 @@ that drive will automatically disconnect (and put up a harmless warning
 that it disconnected without unmounting first).  After a few seconds it
 will mount the real storage you need (on /Volumes/CIRCUITPY/ on a Mac).
 
-7. Download trinkeypass.py from
-https://raw.githubusercontent.com/william-stearns/trinkeypass/main/trinkeypass.py
+7. "code.py" is trinkeypass.py with comments removed.  Download code.py from
+https://raw.githubusercontent.com/william-stearns/trinkeypass/main/code.py
 , place it in this directory, and name it code.py.  Here's the command to
 do it:
 
 ```
 cd /Volumes/CIRCUITPY/
-curl -fsSL https://raw.githubusercontent.com/william-stearns/trinkeypass/main/trinkeypass.py -o code.py
+curl -fsSL https://raw.githubusercontent.com/william-stearns/trinkeypass/main/code.py -o code.py
 touch .metadata_never_index
 sync
 ```
@@ -179,6 +179,18 @@ computer issue.  Have you tried rebooting it?  --Tech support").
 * Use 0000.txt to store contact information, including "How to return
 this to me" information should someone find it.
 
+* In 0001.txt place hints of what's stored in the other slots, like:
+
+```
+2  Password safe
+3  Home email
+4  Work email
+...
+```
+
+   If you forget what they are, go back to this slot 1 and press T2 to
+have the hints come out in whatever window has keyboard focus.
+
 * Since this device can only give the barest of feedback of which key
 you're on (the LEDs that indicate 0-15, and wrap around when they reach
 any multiple of 16), you might want to use a standard password vault like
@@ -244,6 +256,11 @@ MIIJJ...........
 
    Go to a command prompt on a system running the ssh-agent.  Feed these
 characters into the shell and the key will be loaded into the ssh-agent.
+
+* You can enter more than one field on a web form.  Simply put your
+username on the first line and put the password on the second line, both
+ending in a linefeed.  Both will be entered.  (That's not as safe as now
+an attacker knows what account you have, but it's more convenient.)
 
 
 ### Using the transform feature
