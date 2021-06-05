@@ -2,7 +2,7 @@
 """This code, designed to run on an Adafruit Neo Trinkey, sends a password
 to the connected system as if it was a keyboard."""
 
-__version__ = '0.0.11'
+__version__ = '0.0.16'
 
 __author__ = 'William Stearns'
 __copyright__ = 'Copyright 2021, William Stearns'
@@ -16,11 +16,12 @@ __status__ = 'Development'				#Prototype, Development or Production
 import os
 import sys
 import time
-import gc
+#import gc
 import board														# pylint: disable=import-error
 import touchio														# pylint: disable=import-error
 import usb_hid														# pylint: disable=import-error
 import neopixel														# pylint: disable=import-error
+import storage														# pylint: disable=import-error
 from adafruit_hid.keyboard import Keyboard										# pylint: disable=import-error
 from adafruit_hid.keyboard_layout_us import KeyboardLayoutUS								# pylint: disable=import-error
 #from adafruit_hid.keycode import Keycode										# pylint: disable=import-error,unused-import
@@ -65,12 +66,12 @@ def get_keypress(k1, k2):
 	t2press = False
 	timecycles = 0
 
-	while (not t1press) and (not t2press):
-		if k1.value or k2.value:
+	while (not t1press) and (not t2press):							#Keep going through the loop as loong as we've not yet seen a press
+		while (k1.value ^ key_invert) or (k2.value ^ key_invert):			#While either button is pressed
 			oldt1 = t1press
 			oldt2 = t2press
-			t1press = t1press or k1.value
-			t2press = t2press or k2.value
+			t1press = t1press or (k1.value ^ key_invert)
+			t2press = t2press or (k2.value ^ key_invert)
 
 			if oldt1 != t1press or oldt2 != t2press:				#If we've added a key since the last loop...
 				if t1press and t2press:
@@ -79,12 +80,8 @@ def get_keypress(k1, k2):
 					set_neo(pixels, [2], color_keypress, False)		#Pixel closest to pad 1
 				elif t2press:
 					set_neo(pixels, [1], color_keypress, False)		#Pixel closest to pad 2
-
-			while k1.value or k2.value:
-				time.sleep(0.1)
-				timecycles += 1
-		else:
 			time.sleep(0.1)
+			timecycles += 1
 
 	set_neo(pixels, default_pixels, default_color, True)
 
@@ -112,12 +109,12 @@ def load_file_into_string(filename):
 	return file_string, raw_bytes
 
 
-def load_raw_keyfile(passfile_dir, padded_key_number):
+def load_raw_keyfile(passfile_dir, key_filename):
 	"""Load the contents of the requested key."""
 
 	content = None
 
-	filename = passfile_dir + padded_key_number + '.txt'
+	filename = passfile_dir + key_filename
 	if obj_exists(filename) and not isdir(filename):
 		content, _ = load_file_into_string(filename)
 	else:
@@ -126,38 +123,28 @@ def load_raw_keyfile(passfile_dir, padded_key_number):
 	return content
 
 
-#def delete_files(passfile_dir):
-#	"""Deletes all password files from this device."""
+#def transform_raw(raw_string, xform_key):
+#	"""Converts a raw string into a transformed string."""
+#	#If xform_key empty or false, just return the string as is.
+#	#If xform_key non-empty, swap the case of all keys lining up with Trues in xform_key (we can think of xform_key being repeated over and over enough to cover the entire raw_string.
 #
-#	for passnum in range(0, 10000):
-#		filename = passfile_dir + pad_zeroes(passnum) + '.txt'
-#		if obj_exists(filename) and not isdir(filename):
-#			os.remove(filename)
-
-
-def transform_raw(raw_string, xform_key):
-	"""Converts a raw string into a transformed string."""
-	#If xform_key empty or false, just return the string as is.
-	#If xform_key non-empty, swap the case of all keys lining up with Trues in xform_key (we can think of xform_key being repeated over and over enough to cover the entire raw_string.
-
-	if xform_key:
-		output_text = ''
-		for s_index in range(0, len(raw_string)):
-			#Loop through the xform key values, wrapping around to the 0th element when we get to the end.
-			orig_char = raw_string[s_index]
-			if xform_key[s_index % len(xform_key)]:						#Pull out the True/False value from xform_key
-				if orig_char.isupper():
-					output_text = output_text + orig_char.lower()
-				elif orig_char.isdigit():
-					output_text = output_text + str(9 - int(orig_char))	#Replace each digit with 9-thatdigit
-				else:
-					output_text = output_text + orig_char.upper()
-			else:
-				output_text = output_text + orig_char
-	else:
-		output_text = raw_string
-
-	return output_text
+#	if xform_key:
+#		output_text = ''
+#		for s_index, orig_char in enumerate(raw_string):
+#			#Loop through the xform key values, wrapping around to the 0th element when we get to the end.
+#			if xform_key[s_index % len(xform_key)]:						#Pull out the True/False value from xform_key
+#				if orig_char.isupper():
+#					output_text = output_text + orig_char.lower()
+#				elif orig_char.isdigit():
+#					output_text = output_text + str(9 - int(orig_char))	#Replace each digit with 9-thatdigit
+#				else:
+#					output_text = output_text + orig_char.upper()
+#			else:
+#				output_text = output_text + orig_char
+#	else:
+#		output_text = raw_string
+#
+#	return output_text
 
 
 def flash_neo(pixel_h, which_ones, color, how_long):
@@ -200,18 +187,22 @@ zero_pads = '0000'
 
 #User-editable values
 seconds_to_erase = 7
+max_unlock_failures = 7
 neo_brightness = 0.2
 
 color_keynum = green
 color_wakeup = blue
 color_keypress = purple
 color_blank = black
-color_xform_mode = cyan
+#color_xform_mode = cyan
+color_unlock_mode = yellow
 color_error = red
 
 
 #Setup
 if os.uname().machine == 'Adafruit NeoPixel Trinkey M0 with samd21e18':
+	key_invert = False
+
 	pixels = neopixel.NeoPixel(board.NEOPIXEL, 4, brightness=neo_brightness, auto_write=False)
 
 	keyboard = Keyboard(usb_hid.devices)
@@ -225,9 +216,21 @@ else:
 	sys.exit(1)
 
 selected_keynum = 0
-xform_entry_mode = False
-xform_list = []
+#xform_entry_mode = False
+unlock_entry_mode = False
+#xform_list = []
+unlock_code = ""
+unlock_failures = 0
 default_color = color_keynum
+
+#try:
+#	from secrets import secrets
+#except ImportError:
+#	secrets = {}
+#
+#if 'unlock' not in secrets:
+#	secrets['unlock'] = ''
+
 
 
 if obj_exists('/sd/') and isdir('/sd/'):					#Where will the password files be?
@@ -235,45 +238,66 @@ if obj_exists('/sd/') and isdir('/sd/'):					#Where will the password files be?
 else:
 	data_dir = '/'								#Otherwise, the contents will be immediately at the top of the filesystem.
 
+pw_subdir = ''									#This dir is under data_dir, equal to unlock_code (unless the directory does not exist, then empty so we use the password files in data_dir)
+
 default_pixels = []
 
 for led in [0, 1, 2, 3]:
 	flash_neo(pixels, [led], color_wakeup, 1)
 
 while True:
-	print(str(gc.mem_free()) + " bytes free")				# pylint: disable=no-member
+	#print(str(gc.mem_free()) + " bytes free")				# pylint: disable=no-member
 	(t1, t2, cycles) = get_keypress(touch1, touch2)
 	#print(str(t1) + ' ' + str(t2) + ' ' + str(cycles))
 	if t1 and t2:
 		#Both Touch1 and Touch2 pressed.  This switches back and forth between normal (select/send keys) mode and enter xform mode.
-		#if cycles < (seconds_to_erase * 10):
-		if xform_entry_mode:
-			#print("Switching back to normal operation")
+		if cycles >= (seconds_to_erase * 10):
+			#Erasing the entire storage because the user held both keys for more than 7 seconds
+			storage.erase_filesystem()
+		#if xform_entry_mode:
+		#	#Switching back to normal operation
+		#	default_color = color_keynum
+		#	default_pixels = num_to_neo[selected_keynum % 16]
+		#	set_neo(pixels, default_pixels, default_color, True)
+		elif unlock_entry_mode:
+			#Switching back to normal operation
 			default_color = color_keynum
 			default_pixels = num_to_neo[selected_keynum % 16]
-			set_neo(pixels, default_pixels, default_color, True)
+			if not obj_exists(data_dir + unlock_code) or not isdir(data_dir + unlock_code):
+				#Supplied unlock_code does not correspond to a dir in the filesystem; track how many fails and erase_filesystem if too many
+				unlock_failures += 1
+				if unlock_failures > max_unlock_failures:
+					#Erasing the entire storage because there were more than 7 unlock failures
+					storage.erase_filesystem()
+			elif obj_exists(data_dir + unlock_code) and isdir(data_dir + unlock_code):		# and obj_exists(data_dir + unlock_code + '/0000.txt'):
+				pw_subdir = unlock_code + '/'
+				selected_keynum = 0
+				default_pixels = num_to_neo[selected_keynum % 16]
+				if unlock_code:
+					#You only reset the failure count if you actually guess a correct one, not by going back to the top level directory with an empty unlock code.
+					unlock_failures = 0
 		else:
-			#print("Switching into xform entry mode")
-			default_color = color_xform_mode
+			#Switching into unlock entry mode
+			default_color = color_unlock_mode
 			default_pixels = [0,3]
-			set_neo(pixels, default_pixels, default_color, True)
-			xform_list = []
+			unlock_code = ""
 
-		xform_entry_mode = xform_entry_mode ^ True			#xor with true to switch to opposite value (True->False, False->True)
-		#Note: this program can't delete files while the storage is mounted by the host.  Disable feature for the moment.
-		#else:
-		#	print("Erasing now\n")
-		#	delete_files(data_dir)
+		set_neo(pixels, default_pixels, default_color, True)
+		unlock_entry_mode = unlock_entry_mode ^ True			#xor with true to switch to opposite value (True->False, False->True)
 
 	elif t1:
 		#Only T1 pressed.  In normal mode, this moves us to the next password.  In "enter xform" mode, add a "False/nocasechange" to the xform list.
-		if xform_entry_mode:
-			xform_list.append(False)
-			print(str(xform_list))
+		#if xform_entry_mode:
+		#	xform_list.append(False)
+		#	print(str(xform_list))
+		if unlock_entry_mode:
+			unlock_code = unlock_code + '1'
+		#elif unlock_code != secrets['unlock']:
+		#	flash_neo(pixels, [0, 3], color_unlock_mode, 0.5)
 		else:
 			if selected_keynum == 9999:
 				selected_keynum = 0
-			elif obj_exists(data_dir + (zero_pads + str(selected_keynum + 1))[-4:] + '.txt'):
+			elif obj_exists(data_dir + pw_subdir + (zero_pads + str(selected_keynum + 1))[-4:] + '.txt'):
 				selected_keynum += 1
 			else:
 				selected_keynum = 0
@@ -281,13 +305,17 @@ while True:
 			default_pixels = num_to_neo[selected_keynum % 16]
 			set_neo(pixels, default_pixels, color_keynum, True)
 
-
 	elif t2:
 		#Only T2 pressed.  In normal mode, send the currently selected password like a keyboard.  In "enter xform" mode, add a "True/casechange" to the xform list.
-		if xform_entry_mode:
-			xform_list.append(True)
-			print(str(xform_list))
+		#if xform_entry_mode:
+		#	xform_list.append(True)
+		#	print(str(xform_list))
+		if unlock_entry_mode:
+			unlock_code = unlock_code + '2'
+		#elif unlock_code != secrets['unlock']:
+		#	flash_neo(pixels, [0, 3], color_unlock_mode, 0.5)
 		else:
-			target_string = transform_raw(load_raw_keyfile(data_dir, (zero_pads + str(selected_keynum))[-4:]), xform_list)
+			#target_string = transform_raw(load_raw_keyfile(data_dir + pw_subdir, (zero_pads + str(selected_keynum))[-4:] + '.txt'), xform_list)
+			target_string = load_raw_keyfile(data_dir + pw_subdir, (zero_pads + str(selected_keynum))[-4:] + '.txt')
 			if target_string:
 				keyboard_layout.write(target_string)

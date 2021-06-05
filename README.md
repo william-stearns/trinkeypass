@@ -25,8 +25,10 @@ at the end.
 
 3. Download the firmware from <https://adafru.it/RD7> , redirects to
 <https://circuitpython.org/board/neopixel_trinkey_m0/> .  You need the
-UF2 file, which will download with a filename like
-adafruit-circuitpython-neopixel_trinkey_m0-en_US-6.2.0.uf2 .
+most recent 7.x UF2 file, which will download with a filename like
+adafruit-circuitpython-neopixel_trinkey_m0-en_US-7.0.0-alpha.2.uf2 .
+<https://adafruit-circuit-python.s3.amazonaws.com/bin/neopixel_trinkey_m0/en_US/adafruit-circuitpython-neopixel_trinkey_m0-en_US-7.0.0-alpha.2.uf2>
+as of this writing.
 
 4. Insert the Trinkey into a USB port.  On a Mac - and possibly other
 platforms too - the OS may note that a new keyboad and/or drive have been
@@ -79,7 +81,7 @@ restart the password safe software.
 LEDs 1-3 are clockwise from LED 0.  When the trinkeypass software starts,
 it flashes the 4 LEDs in order in blue.
 
-3. There are two touch-sensitive pads, T1 and T2 at the far end from the
+3. There are two touch-sensitive pads, T1 and T2, at the far end from the
 USB connector.  You'll tap one or both of these to get the Trinkey to do
 something.  T2 is on the same edge as the reset button, T1 on the
 opposite edge.  (The board has a "1" and a "2" silkscreened as reminders
@@ -197,9 +199,9 @@ any multiple of 16), you might want to use a standard password vault like
 lastpass and reserve this for master passwords and key passphrases -
 things you wouldn't normally want to place in a vault.
 
-* Can also use this drive to store key files, but we discourage placing
-all factors needed to login on any single storage device including this
-one.
+* You can also use this drive to store key files, but we discourage
+placing all factors needed to login on any single storage device
+including this one.
 
 * At the time of this writing (Apr 2021), it appears that circuitpython
 may only support the US keyboard layout.  The authors are open to other
@@ -213,6 +215,9 @@ the hostname, type those into the password box by hand and enter the
 the characters you type plus the characters provided by trinkeypass need
 to end up the same as what the remote system/application expect.
 
+* You could even split any given password between two trinkeys held by
+two different people for a particularly sensitive password.
+
 * It's a good idea to buy 2 or more of these and load your passwords on
 all of them.  You can keep one with you, perhaps in a wallet or on a
 keyring, and place the others in safe locations.
@@ -222,24 +227,6 @@ multiple people.  A Trinkeypass could hold a root/Administrator password,
 database credentials, and any other credentials not needed in normal
 operation.  This could be passed from admin to admin on shift changes or
 stored in a central locked area.
-
-* The default firmware (the .uf2 file you downloaded and installed)
-shares a drive that mounts on /Volumes/CIRCUITPY/ , which is exactly what
-you want when you want to update the code or edit any password files. 
-This is not what you want forever because this makes the files visible to
-any person or program on the computer.  To address this I've build a
-modified firmware that no longer shares that drive space with the host
-computer.  The keyboard part still works fine, so you can still *type*
-the passwords to the host, you just can't see the files on a drive share
-any more.
-
-   To switch to the other firmware double click the reset button and copy
-the other firmware file to /Volumes/TRINKEYBOOT/ .  That's it - the
-system will reboot with the other firmware.
-
-   To switch back to the original firmware that shares the files (so you
-can update the program or the password files), repeat the above step with
-the original firmware file.
 
 * To load an ssh private key into memory, put the following into one of
 your password files.  The key won't be saved on disk, but be aware that
@@ -262,62 +249,84 @@ username on the first line and put the password on the second line, both
 ending in a linefeed.  Both will be entered.  (That's not as safe as now
 an attacker knows what account you have, but it's more convenient.)
 
+* If you hold down both T1 and T2 for longer than 7 seconds, everything
+on the unit is erased.
 
-### Using the transform feature
+* Also, if you try to switch to a different password collection more than
+7 times (see below), everything on the unit is erased too.
 
-   There's an issue with placing your passwords verbatim in a file on
-this key.  If the key were ever stolen or lost and found by someone else,
-they could insert it into their own computer and read your passwords
-verbatim by copying off those files.
 
-   To handle this, we'll transform them.  What we'll store on disk will
-no longer be the actual password; it'll be modified.  When it comes time
-to actually type the keys,  we'll modify it back to the original
-password.  Here's an example.
+### Unlocking alternate password collections
 
-   Let's say my login password for a particular system is
-"ANiceButBlandPassword2222" .  I want to store that with the the case
-swapped for the second character out of every 4 swapped:
+   By default, trinkeypass gets its passwords from files in the top level
+directory named 0000.txt, 0001.txt, and so on.  By creating directories
+on the drive you can store alternate collections of password files and
+switch between them.
 
+1. Create a directory called "1212" under /Volumes/CIRCUITPY/ .  In
+/Volumes/CIRCUITPY/1212/ , place a file called 0000.txt that has a
+_different_ password than the one immediately inside /Volumes/CIRCUITPY/
+.  Now create another file in the same directory called 0001.txt .
+
+2. To switch to this collection, press T1 and T2 at the same time to
+enter "unlock" mode (note that two LEDs turn yellow).  Since the
+directory you want to use is named "1212", press T1, T2, T1, and finally
+T2.  Now press T1 and T2 at the same time again to show you're done. 
+You've now switched to the new passwords.
+
+3. Press T2 to push out the current password.  Note that it's the one
+inside /Volumes/CIRCUITPY/1212/0000.txt , not the one in
+/Volumes/CIRCUITPY/0000.txt .
+
+4. To switch back to the top level directory, press T1 and T2, release
+them, and press both again and release.
+
+5. You can have multiple directories like this, just name them with 1s
+and 2s and include at least one password file 0000.txt in each.  Now you
+can break up your passwords into collections like:
+* Home
+* Master passwords
+* Production
+* SSH
+* Test
+
+6. Please make your directory names long so they're not easily guessed.
+
+7. Note that when the Trinkeypass first starts up it will feed out text
+from the files in /Volumes/CIRCUITPY/ without requiring you to enter any
+unlock code).  Because of this you may want to put dummy text in these
+files and put your real passwords in the subdirectories.  Example:
 ```
-aNICEbutblandpassWORD2222
- ^   ^   ^   ^   ^   ^   
-1234123412341234123412341
+#Please return this to Bob Jones, 1 Main St, Springfield IL and I will mail you a $20 reward.
 ```
 
-   So I'll change the case of each character above a caret: "N", "b",
-"l", "p", "W", and the first "2".  Any digit that needs its "case
-swapped" gets subtracted from 9.  Here's what I save on 0001.txt:
 
-```
-anICEButbLandPasswORD7222
-```
+### Using the lockdown feature.
 
-   This means that if anyone can get the files off my Trinkey, they won't
-have the actual passwords, just these slightly modified ones.
+   The Trinkey shares a drive that mounts on /Volumes/CIRCUITPY/ , which
+is exactly what you want when you want to update the code or edit any
+password files.  This is not what you want forever because this makes the
+files visible to any person or program on the computer.
 
-   Now we tell Trinkeypass to do this transformation for the second
-character of every block of 4:
+   Once you're happy with the configuration and you no longer want to
+make any changes, you can totally lock down the system (which will no
+longer share the drive on which your unlock code and passwords are
+stored, as well as removing a few other features that might potentially
+give an attacker access).  Make sure you've entered an unlock pin first,
+then:
 
-1. Enter xform mode by pressing *both* pads and releasing (both lights
-should light blue and go out when you release them).  LED3 will change to
-cyan to show you you're in "Enter transform" mode.
+1. Go to /Volumes/CIRCUITPY/
 
-2. Now tap the following buttons: T1, T2, T1, T1.  Pressing T1 indicates
-"leave this character as it is".  Pressing T2 means "swap the case of
-this character".  By pressing 4 of these you've said "break the password
-into groups of 4 characters", only the second of which gets its case
-swapped.  Press *both* pads once more to exit transform mode.  (This
-transform stays in memory and is used until the key is removed from the
-USB port or you enter a different transform.
+2. Rename bootlockdown.py to boot.py
 
-3. Now that we're back in normal mode press T1 until I'm on the second
-password (0001.txt, just LED0 lit green).  When I press T2 now, the
-transform I just entered will *reverse* the character changes and type
-"aNICEbutblandpassWORD2222" as a keyboard.
+3. Run "sync" and wait two seconds.
 
-4. In versions >= 0.0.9 this swaps the case of letters and replaces every
-digit with (9-thatdigit) .
+4. Press Reset on top of the Trinkey.
+
+   From this point on the drive will no longer be visible.  There is no
+way to return to normal operation.
+
+
 
 
 
@@ -358,6 +367,8 @@ Lightning to USB Camera adapter
 from Apple, $35, supports USB3, or
 <https://www.amazon.com/Adapter-Charging-Portable-Compatible-Support/dp/B08LQ2K8RL/>,
 generic, USB2 only, $13)
+    Note: my early tests with these have been unsuccessful.
 
-* To hook it to a keychain, order some 1mm wide chains
-(<https://www.amazon.com/gp/product/B01A438QHG/> , $9.60 for a 50-pack)
+
+* To hook it to a keychain, order some small keychain rings like
+(<https://www.amazon.com/gp/product/B01MG68TV6/> , $6.96 for a 200-pack)
